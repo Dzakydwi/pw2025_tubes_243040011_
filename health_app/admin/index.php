@@ -1,6 +1,6 @@
 <?php
-session_start(); // Pastikan session dimulai untuk akses admin
 include '../config/database.php'; // Koneksi database
+include 'includes/header.php';
 
 // Periksa apakah admin sudah login
 if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {

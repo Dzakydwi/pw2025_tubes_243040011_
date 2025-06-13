@@ -1,8 +1,8 @@
 <?php
-// user/includes/header.php
-// Pastikan session sudah dimulai sebelum ini di-include di halaman utama
-// session_start(); // Jika belum dimulai di halaman yang meng-include ini
-// include '../config/database.php'; // Jika diperlukan di header
+if (session_status() == PHP_SESSION_NONE) {
+    session_start();
+}   
+
 ?>
 <!DOCTYPE html>
 <html lang="en">

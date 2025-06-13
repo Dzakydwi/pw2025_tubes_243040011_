@@ -1,8 +1,14 @@
 <?php
 session_start();
-include '../config/database.php';
+include '../config/database.php'; // Pastikan path ini benar
 
 $error = '';
+$success_message = ''; // Untuk menampilkan pesan sukses dari registrasi
+
+// Cek jika ada pesan sukses dari registrasi
+if (isset($_GET['registration_success']) && $_GET['registration_success'] == 'true') {
+    $success_message = "Registrasi berhasil! Silakan login dengan akun Anda.";
+}
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $email = $_POST['email'] ?? '';
@@ -16,8 +22,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
     if ($result->num_rows > 0) {
         $user = $result->fetch_assoc();
-        // Verifikasi password (gunakan password_verify() untuk hashed password)
-        if ($password === $user['password']) { // Ganti dengan password_verify($password, $user['password']) jika menggunakan hashing
+        // Verifikasi password menggunakan password_verify()
+        if (password_verify($password, $user['password'])) {
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['user_name'] = $user['nama'];
             $_SESSION['user_role'] = $user['role'];
@@ -35,22 +41,27 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $error = "Email atau password salah.";
     }
     $stmt->close();
+    $conn->close(); // Tutup koneksi setelah selesai
 }
 ?>
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login Aplikasi Kesehatan</title>
+    <title>Login ke HealthDoc</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="../assets/css/style.css">
-</head>
+    <link rel="stylesheet" href="../assets/css/style.css"> </head>
 <body class="bg-light">
     <div class="container d-flex justify-content-center align-items-center min-vh-100">
         <div class="card shadow-lg p-4" style="width: 100%; max-width: 400px;">
             <h3 class="card-title text-center mb-4">Login</h3>
+            <?php if ($success_message) : ?>
+                <div class="alert alert-success" role="alert">
+                    <?= $success_message ?>
+                </div>
+            <?php endif; ?>
             <?php if ($error) : ?>
                 <div class="alert alert-danger" role="alert">
                     <?= $error ?>

@@ -47,7 +47,7 @@ $page_title = "Janji Temu Saya";
 include 'includes/header.php';
 ?>
 
-<div class="container">
+  <div class="container">
     <h1 class="my-4 text-center">Janji Temu Saya</h1>
 
     <?php if (isset($_SESSION['message'])) : ?>
@@ -102,24 +102,24 @@ include 'includes/header.php';
                                 <td><?= htmlspecialchars($app['dokter']) ?></td>
                                 <td>
                                     <?php
-                                    $tanggal_obj = DateTime::createFromFormat('Y-m-d', $app['tanggal']);
-                                    echo $tanggal_obj ? htmlspecialchars($tanggal_obj->format('d F Y')) : 'N/A';
+                                        $tanggal_obj = DateTime::createFromFormat('Y-m-d', $app['tanggal']);
+                                        echo $tanggal_obj ? htmlspecialchars($tanggal_obj->format('d F Y')) : 'N/A';
                                     ?>
                                 </td>
                                 <td>
                                     <?php
-                                    $waktu_obj = DateTime::createFromFormat('H:i:s', $app['waktu']);
-                                    echo $waktu_obj ? htmlspecialchars($waktu_obj->format('H:i')) : 'N/A';
+                                        $waktu_obj = DateTime::createFromFormat('H:i:s', $app['waktu']);
+                                        echo $waktu_obj ? htmlspecialchars($waktu_obj->format('H:i')) : 'N/A';
                                     ?>
                                 </td>
                                 <td class="text-center">
                                     <?php
-                                    // Create a combined DateTime object for comparison
-                                    $appointment_datetime_str = $app['tanggal'] . ' ' . $app['waktu'];
-                                    $appointment_datetime = DateTime::createFromFormat('Y-m-d H:i:s', $appointment_datetime_str);
-                                    $current_datetime = new DateTime(); // Current server time
+                                        // Create a combined DateTime object for comparison
+                                        $appointment_datetime_str = $app['tanggal'] . ' ' . $app['waktu'];
+                                        $appointment_datetime = DateTime::createFromFormat('Y-m-d H:i:s', $appointment_datetime_str);
+                                        $current_datetime = new DateTime(); // Current server time
 
-                                    $is_upcoming = ($appointment_datetime && $appointment_datetime >= $current_datetime);
+                                        $is_upcoming = ($appointment_datetime && $appointment_datetime >= $current_datetime);
                                     ?>
                                     <?php if ($is_upcoming) : ?>
                                         <a href="edit_appointment.php?id=<?= htmlspecialchars($app['id']) ?>" class="btn btn-edit btn-action me-2"><i class="fas fa-edit"></i> Edit</a>
@@ -136,7 +136,7 @@ include 'includes/header.php';
         </div>
     </div>
 
-    <?php
-    // --- INCLUDE FOOTER ---
-    include 'includes/footer.php';
-    ?>
+<?php
+// --- INCLUDE FOOTER ---
+include 'includes/footer.php';
+?>

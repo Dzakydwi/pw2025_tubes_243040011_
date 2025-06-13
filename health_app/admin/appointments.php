@@ -1,6 +1,6 @@
 <?php
-session_start();
 include '../config/database.php';
+include 'includes/header.php';
 
 // Periksa apakah admin sudah login
 if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
@@ -9,14 +9,24 @@ if (!isset($_SESSION['user_id']) || $_SESSION['user_role'] !== 'admin') {
 }
 
 $appointments = [];
-// PERBAIKAN TERBARU: Menghapus 'a.status' dari SELECT statement karena kolom ini juga tidak ada.
-// Sekarang query hanya mengambil kolom yang diyakini ada: id, tanggal, waktu, dokter, dan nama pasien.
-$stmt_appointments = $conn->prepare("
+$filter = $_GET['filter'] ?? 'all'; // Default filter for admin page
+
+$sql = "
     SELECT a.id, a.tanggal, a.waktu, a.dokter, u.nama as patient_name
     FROM appointments a
     JOIN users u ON a.user_id = u.id
-    ORDER BY a.tanggal DESC, a.waktu DESC
-");
+";
+
+if ($filter === 'upcoming') {
+    $sql .= " WHERE a.tanggal >= CURDATE() ORDER BY a.tanggal ASC, a.waktu ASC";
+} elseif ($filter === 'past') {
+    $sql .= " WHERE a.tanggal < CURDATE() ORDER BY a.tanggal DESC, a.waktu DESC";
+} else {
+    // 'all' or invalid filter
+    $sql .= " ORDER BY a.tanggal DESC, a.waktu DESC";
+}
+
+$stmt_appointments = $conn->prepare($sql);
 
 if ($stmt_appointments) {
     $stmt_appointments->execute();
@@ -27,20 +37,11 @@ if ($stmt_appointments) {
     $stmt_appointments->close();
 }
 
-// Logika untuk CRUD atau update status (yang mungkin perlu ditambahkan jika status ada) akan ditambahkan di sini atau di file terpisah.
+$page_title = "Manajemen Janji Temu - Admin HealthDoc";
+// include 'includes/header.php';
 ?>
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manajemen Janji Temu - HealthDoc</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
-    
-    <style>
+<style>
         :root {
             --primary-color: #007bff;
             --secondary-color: #6c757d;
@@ -62,7 +63,7 @@ if ($stmt_appointments) {
             color: var(--heading-color);
         }
 
-        /* Navbar Admin (reused from dashboard) */
+        /* Navbar Admin */
         .admin-navbar {
             background-color: var(--dark-bg);
             padding: 15px 0;
@@ -165,15 +166,6 @@ if ($stmt_appointments) {
             background-color: #c82333;
             border-color: #c82333;
         }
-        .btn-info-status { /* Untuk tombol update status */
-            background-color: #17a2b8; /* info */
-            color: white;
-            border-color: #17a2b8;
-        }
-        .btn-info-status:hover {
-            background-color: #117a8b;
-            border-color: #117a8b;
-        }
         .btn-add-new {
             background-color: var(--primary-color);
             border-color: var(--primary-color);
@@ -189,19 +181,6 @@ if ($stmt_appointments) {
             transform: translateY(-2px);
         }
 
-        /* Badge status (kelas ini tetap ada jika sewaktu-waktu Anda menambahkan kolom status) */
-        .badge-status {
-            font-size: 0.85em;
-            padding: 0.4em 0.8em;
-            border-radius: 0.5rem;
-            font-weight: 600;
-        }
-        .badge-pending { background-color: #ffc107; color: #fff; } /* warning */
-        .badge-confirmed { background-color: #28a745; color: #fff; } /* success */
-        .badge-completed { background-color: #6f42c1; color: #fff; } /* purple */
-        .badge-cancelled { background-color: #dc3545; color: #fff; } /* danger */
-
-
         /* Footer */
         .footer {
             background-color: var(--dark-bg);
@@ -212,67 +191,45 @@ if ($stmt_appointments) {
             margin-top: 50px;
         }
     </style>
-</head>
-<body>
 
-    <nav class="navbar navbar-expand-lg admin-navbar fixed-top">
-        <div class="container">
-            <a class="navbar-brand" href="index.php">HealthDoc</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavAdmin" aria-controls="navbarNavAdmin" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNavAdmin">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="index.php">Dashboard</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="patients.php">Manajemen Pasien</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link active" aria-current="page" href="appointments.php">Manajemen Janji Temu</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="doctors.php">Manajemen Dokter</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="../auth/logout.php">Logout <i class="fas fa-sign-out-alt ms-1"></i></a>
-                    </li>
-                </ul>
+<div class="container my-5">
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h4 class="mb-0">Manajemen Janji Temu</h4>
+            <div class="d-flex align-items-center">
+                <a href="add_appointment.php" class="btn btn-success me-3"><i class="fas fa-calendar-plus me-2"></i> Tambah Janji Temu</a>
+                <div class="dropdown">
+                    <button class="btn btn-light dropdown-toggle" type="button" id="filterDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                        Filter: <?= ucfirst($filter) ?>
+                    </button>
+                    <ul class="dropdown-menu" aria-labelledby="filterDropdown">
+                        <li><a class="dropdown-item <?= ($filter === 'all') ? 'active' : '' ?>" href="appointments.php?filter=all">Semua Janji Temu</a></li>
+                        <li><a class="dropdown-item <?= ($filter === 'upcoming') ? 'active' : '' ?>" href="appointments.php?filter=upcoming">Janji Temu Mendatang</a></li>
+                        <li><a class="dropdown-item <?= ($filter === 'past') ? 'active' : '' ?>" href="appointments.php?filter=past">Janji Temu Terlewat</a></li>
+                    </ul>
+                </div>
             </div>
         </div>
-    </nav>
-
-    <div style="height: 80px;"></div> 
-
-    <div class="container main-content-container">
-        <h1 class="mb-5 text-center">Manajemen Janji Temu</h1>
-
-        <div class="data-card">
-            <div class="card-header">
-                Daftar Janji Temu
-                <a href="add_appointment.php" class="btn btn-add-new btn-sm"><i class="fas fa-calendar-plus me-2"></i> Tambah Janji Temu</a>
-            </div>
-            <div class="card-body">
-                <?php if (empty($appointments)) : ?>
-                    <div class="alert alert-info text-center" role="alert">
-                        Belum ada data janji temu.
-                    </div>
-                <?php else : ?>
-                    <div class="table-responsive">
-                        <table class="table table-hover table-striped table-custom">
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Pasien</th>
-                                    <th>Dokter</th>
-                                    <th>Tanggal</th>
-                                    <th>Waktu</th>
-                                    <th class="text-center">Aksi</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($appointments as $appt) : ?>
+        <div class="card-body">
+            <?php if (empty($appointments)) : ?>
+                <div class="alert alert-info text-center" role="alert">
+                    Tidak ada janji temu yang ditemukan untuk filter ini.
+                </div>
+            <?php else : ?>
+                <div class="table-responsive">
+                    <table class="table table-hover table-striped">
+                        <thead>
+                            <tr>
+                                <th scope="col">ID</th>
+                                <th scope="col">Pasien</th>
+                                <th scope="col">Dokter</th>
+                                <th scope="col">Tanggal</th>
+                                <th scope="col">Waktu</th>
+                                <th scope="col" class="text-center">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($appointments as $appt) : ?>
                                 <tr>
                                     <td><?= htmlspecialchars($appt['id']) ?></td>
                                     <td><?= htmlspecialchars($appt['patient_name']) ?></td>
@@ -280,26 +237,33 @@ if ($stmt_appointments) {
                                     <td><?= date('d M Y', strtotime($appt['tanggal'])) ?></td>
                                     <td><?= date('H:i', strtotime($appt['waktu'])) ?></td>
                                     <td class="text-center">
-                                        <a href="edit_appointment.php?id=<?= $appt['id'] ?>" class="btn btn-edit btn-action" title="Edit Janji Temu"><i class="fas fa-edit"></i></a>
-                                        <a href="delete_appointment.php?id=<?= $appt['id'] ?>" class="btn btn-delete btn-action" title="Hapus Janji Temu" onclick="return confirm('Apakah Anda yakin ingin menghapus janji temu ini?');"><i class="fas fa-trash-alt"></i></a>
+                                        <?php
+                                            // Create a combined DateTime object for comparison
+                                            $appointment_datetime_str = $appt['tanggal'] . ' ' . $appt['waktu'];
+                                            $appointment_datetime = DateTime::createFromFormat('Y-m-d H:i:s', $appointment_datetime_str);
+                                            $current_datetime = new DateTime(); // Current server time
+                                            
+                                            // Compare full datetime to determine if it's upcoming
+                                            $is_upcoming = ($appointment_datetime && $appointment_datetime >= $current_datetime);
+                                        ?>
+                                        <?php if ($is_upcoming) : ?>
+                                            <a href="edit_appointment.php?id=<?= htmlspecialchars($appt['id']) ?>" class="btn btn-edit btn-action me-2" title="Edit Janji Temu"><i class="fas fa-edit"></i></a>
+                                            <a href="delete_appointment.php?id=<?= htmlspecialchars($appt['id']) ?>" class="btn btn-delete btn-action" title="Hapus Janji Temu" onclick="return confirm('Apakah Anda yakin ingin menghapus janji temu ini?');"><i class="fas fa-trash-alt"></i></a>
+                                        <?php else : ?>
+                                            <span class="badge bg-secondary">Selesai/Lewat</span>
+                                        <?php endif; ?>
                                     </td>
                                 </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                <?php endif; ?>
-            </div>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            <?php endif; ?>
         </div>
     </div>
+</div>
 
-    <footer class="footer">
-        <div class="container">
-            <p>&copy; 2025 HealthDoc. All rights reserved.</p>
-        </div>
-    </footer>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
-<?php $conn->close(); ?>
+<?php
+include 'includes/footer.php';
+$conn->close();
+?>

@@ -1,15 +1,14 @@
 <?php
 session_start();
-include '../config/database.php';
+include '../config/database.php'; // Pastikan path ini benar
 
 $success = '';
 $error = '';
 
-// Inisialisasi variabel untuk menghindari "Undefined variable" dan "Deprecated" warnings
+// Inisialisasi variabel untuk menghindari "Undefined variable" warnings
 $nama = '';
 $email = '';
-$password = ''; // Meskipun tidak ditampilkan langsung, lebih baik diinisialisasi
-$confirm_password = ''; // Meskipun tidak ditampilkan langsung, lebih baik diinisialisasi
+// Password tidak perlu diinisialisasi di sini karena tidak ditampilkan dalam value input
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $nama = $_POST['nama'] ?? '';
@@ -32,23 +31,24 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $stmt_check->execute();
         $result_check = $stmt_check->get_result();
         if ($result_check->num_rows > 0) {
-            $error = "Email sudah terdaftar.";
+            $error = "Email sudah terdaftar. Silakan gunakan email lain atau login.";
         } else {
-            // Hash password sebelum menyimpan (direkomendasikan untuk produksi)
-            // $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+            // Hashing password sebelum menyimpan ke database (KEAMANAN PENTING!)
+            $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+            $role = 'user'; // Default role untuk pendaftaran adalah 'user'
+            $profile_picture = 'default_profile.png'; // Default profile picture
 
-            // Simpan password plain-text untuk demo ini (TIDAK UNTUK PRODUKSI)
-            $hashed_password = $password;
-
-            $stmt = $conn->prepare("INSERT INTO users (nama, email, password, role) VALUES (?, ?, ?, 'user')");
-            $stmt->bind_param("sss", $nama, $email, $hashed_password);
+            $stmt = $conn->prepare("INSERT INTO users (nama, email, password, role, profile_picture) VALUES (?, ?, ?, ?, ?)");
+            // Perhatikan 'sssss' jika Anda menambahkan 'profile_picture' ke bind_param
+            $stmt->bind_param("sssss", $nama, $email, $hashed_password, $role, $profile_picture);
 
             if ($stmt->execute()) {
-                $success = "Registrasi berhasil! Silahkan login.";
-                // Redirect setelah 2 detik ke halaman login
-                header("refresh:2;url=login.php");
+                $success = "Registrasi berhasil! Silakan login.";
+                // Setelah register berhasil, langsung redirect ke halaman login
+                header('Location: login.php?registration_success=true');
+                exit();
             } else {
-                $error = "Registrasi gagal: " . $conn->error;
+                $error = "Registrasi gagal: " . $stmt->error;
             }
             $stmt->close();
         }
@@ -58,18 +58,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 ?>
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Registrasi Aplikasi Kesehatan</title>
+    <title>Daftar Akun Baru</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    
-</head>
+    <link rel="stylesheet" href="../assets/css/style.css"> </head>
 <body class="bg-light">
     <div class="container d-flex justify-content-center align-items-center min-vh-100">
-        <div class="card shadow-lg p-4" style="width: 100%; max-width: 500px;">
-            <h3 class="card-title text-center mb-4">Registrasi Akun Pasien</h3>
+        <div class="card shadow-lg p-4" style="width: 100%; max-width: 400px;">
+            <h3 class="card-title text-center mb-4">Daftar Akun Baru</h3>
             <?php if ($success) : ?>
                 <div class="alert alert-success" role="alert">
                     <?= $success ?>
@@ -92,6 +91,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                 <div class="mb-3">
                     <label for="password" class="form-label">Password</label>
                     <input type="password" class="form-control" id="password" name="password" required autocomplete="new-password">
+                    <small class="form-text text-muted">Minimal 6 karakter.</small>
                 </div>
                 <div class="mb-3">
                     <label for="confirm_password" class="form-label">Konfirmasi Password</label>

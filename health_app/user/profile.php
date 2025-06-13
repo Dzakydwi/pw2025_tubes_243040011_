@@ -34,80 +34,85 @@ if ($stmt_profile) {
     $error_message = "Gagal mengambil data profil: " . $conn->error;
 }
 
-// Tangani unggah foto profil
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['profile_picture'])) {
-    // Pastikan user_id dan $conn tersedia untuk upload_handler.php
-    // Include the handler file
-    include 'upload_handler.php'; // Pastikan path ini benar relatif dari profile.php
-}
 
-// Tangani pembaruan data profil (selain foto)
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
-    $new_nama = trim($_POST['nama'] ?? '');
-    $new_email = trim($_POST['email'] ?? '');
-    $new_password = $_POST['password'] ?? '';
-    $confirm_password = $_POST['confirm_password'] ?? '';
+if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    // Handle Profile Picture Upload First (if any)
+    if (isset($_FILES['profile_picture']) && $_FILES['profile_picture']['error'] === UPLOAD_ERR_OK) {
+        // Ini akan memanggil logic dari upload_handler.php
+        include 'upload_handler.php'; // Pastikan path ini benar
 
-    // Validasi input
-    if (empty($new_nama) || empty($new_email)) {
-        $error_message = "Nama dan Email wajib diisi.";
-    } elseif (!filter_var($new_email, FILTER_VALIDATE_EMAIL)) {
-        $error_message = "Format email tidak valid.";
-    } else {
-        // Cek apakah email sudah terdaftar oleh user lain
-        $stmt_check_email = $conn->prepare("SELECT id FROM users WHERE email = ? AND id != ?");
-        if ($stmt_check_email) {
-            $stmt_check_email->bind_param("si", $new_email, $user_id);
-            $stmt_check_email->execute();
-            $result_check_email = $stmt_check_email->get_result();
-            if ($result_check_email->num_rows > 0) {
-                $error_message = "Email sudah terdaftar oleh pengguna lain.";
+        // Setelah upload_handler.php dieksekusi, perbarui user_data jika sukses
+        if (!empty($upload_success)) {
+            // Refresh user_data to get the new profile picture name
+            $stmt_refresh_profile = $conn->prepare("SELECT profile_picture FROM users WHERE id = ?");
+            $stmt_refresh_profile->bind_param("i", $user_id);
+            $stmt_refresh_profile->execute();
+            $result_refresh_profile = $stmt_refresh_profile->get_result();
+            if ($result_refresh_profile->num_rows > 0) {
+                $user_data['profile_picture'] = $result_refresh_profile->fetch_assoc()['profile_picture'];
             }
-            $stmt_check_email->close();
-        } else {
-            $error_message = "Gagal menyiapkan pengecekan email: " . $conn->error;
+            $stmt_refresh_profile->close();
+        }
+    }
+
+    // Handle Profile Data Update (Name, Email, Password)
+    if (isset($_POST['update_profile'])) {
+        $nama = trim($_POST['nama'] ?? '');
+        $email = trim($_POST['email'] ?? '');
+        $password = $_POST['password'] ?? '';
+        $confirm_password = $_POST['confirm_password'] ?? '';
+
+        // Validasi input
+        if (empty($nama) || empty($email)) {
+            $error_message = "Nama dan Email wajib diisi.";
+        } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $error_message = "Format email tidak valid.";
         }
 
-        if (empty($error_message)) {
-            $update_sql = "UPDATE users SET nama = ?, email = ?";
-            $update_params = "ss";
-            $params_array = [$new_nama, $new_email];
+        // Siapkan bagian query untuk update
+        $sql = "UPDATE users SET nama = ?, email = ? WHERE id = ?";
+        $params = [$nama, $email, $user_id];
+        $types = "ssi";
 
-            if (!empty($new_password)) {
-                if (strlen($new_password) < 6) {
-                    $error_message = "Password minimal 6 karakter.";
-                } elseif ($new_password !== $confirm_password) {
-                    $error_message = "Konfirmasi password tidak cocok.";
-                } else {
-                    // Hash password sebelum menyimpan
-                    $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
-                    $update_sql .= ", password = ?";
-                    $update_params .= "s";
-                    $params_array[] = $hashed_password;
-                }
+        // Jika password diisi, validasi dan tambahkan ke query
+        if (!empty($password)) {
+            if (strlen($password) < 6) {
+                $error_message = "Password baru minimal 6 karakter.";
+            } elseif ($password !== $confirm_password) {
+                $error_message = "Konfirmasi password baru tidak cocok.";
+            } else {
+                // HASH PASSWORD BARU SEBELUM DISIMPAN
+                $hashed_new_password = password_hash($password, PASSWORD_DEFAULT);
+                $sql = "UPDATE users SET nama = ?, email = ?, password = ? WHERE id = ?";
+                $params = [$nama, $email, $hashed_new_password, $user_id];
+                $types = "sssi";
             }
+        }
 
-            if (empty($error_message)) {
-                $update_sql .= " WHERE id = ?";
-                $update_params .= "i";
-                $params_array[] = $user_id;
+        if (empty($error_message)) { // Hanya proses update jika tidak ada error validasi
+            $stmt_update = $conn->prepare($sql);
+            if ($stmt_update) {
+                $stmt_update->bind_param($types, ...$params);
+                if ($stmt_update->execute()) {
+                    $_SESSION['user_name'] = $nama; // Perbarui nama di sesi
+                    $user_data['nama'] = $nama; // Perbarui data yang ditampilkan
+                    $user_data['email'] = $email; // Perbarui data yang ditampilkan
+                    $success_message = "Profil berhasil diperbarui!";
 
-                $stmt_update = $conn->prepare($update_sql);
-                if ($stmt_update) {
-                    $stmt_update->bind_param($update_params, ...$params_array);
-                    if ($stmt_update->execute()) {
-                        $success_message = "Profil berhasil diperbarui!";
-                        // Perbarui data di $user_data dan sesi setelah berhasil update
-                        $user_data['nama'] = $new_nama;
-                        $user_data['email'] = $new_email;
-                        $_SESSION['user_name'] = $new_nama; // Perbarui nama di sesi
-                    } else {
-                        $error_message = "Gagal memperbarui profil: " . $stmt_update->error;
+                    // Jika password diubah, paksa logout untuk login ulang (opsional, tapi disarankan)
+                    if (!empty($password)) {
+                        session_unset();
+                        session_destroy();
+                        header('Location: ../auth/login.php?message=password_changed'); // Redirect dengan pesan
+                        exit();
                     }
-                    $stmt_update->close();
+
                 } else {
-                    $error_message = "Gagal menyiapkan statement update: " . $conn->error;
+                    $error_message = "Gagal memperbarui profil: " . $stmt_update->error;
                 }
+                $stmt_update->close();
+            } else {
+                $error_message = "Gagal menyiapkan statement update profil: " . $conn->error;
             }
         }
     }
@@ -123,177 +128,51 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
-    
+    <link rel="stylesheet" href="../assets/css/style.css">
     <style>
-        :root {
-            --primary-color: #007bff;
-            --secondary-color: #6c757d;
-            --light-bg: #f8f9fa;
-            --dark-bg: #2c3e50;
-            --text-color: #333;
-            --heading-color: #2c3e50;
-        }
-
-        body {
-            font-family: 'Poppins', sans-serif;
-            color: var(--text-color);
-            background-color: var(--light-bg);
-            line-height: 1.7;
-            /* Pastikan path gambar latar belakang benar jika ingin diterapkan di sini */
-            /* background-image: url('../../assets/img/background_klinik.jpg'); */
-            /* background-size: cover; */
-            /* background-position: center center; */
-            /* background-attachment: fixed; */
-            /* background-repeat: no-repeat; */
-        }
-        h1, h2, h3, h4, h5, h6 {
-            font-family: 'Poppins', sans-serif;
-            font-weight: 700;
-            color: var(--heading-color);
-        }
-
-        /* Navbar Pengguna */
-        .user-navbar {
-            background-color: var(--primary-color);
-            padding: 15px 0;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-        .user-navbar .navbar-brand {
-            color: white !important;
-            font-weight: 700;
-            font-size: 1.5rem;
-        }
-        .user-navbar .nav-link {
-            color: rgba(255,255,255,0.8) !important;
-            font-weight: 500;
-            margin-left: 15px;
-            transition: color 0.3s ease;
-        }
-        .user-navbar .nav-link:hover {
-            color: white !important;
-        }
-
-        /* Container utama */
-        .main-content-container {
-            padding-top: 50px; /* Sesuaikan dengan tinggi navbar */
-            padding-bottom: 50px;
-        }
-
-        /* Card/Panel untuk Form */
-        .profile-card {
-            border: none;
-            border-radius: 15px;
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
-            margin-bottom: 30px;
-            background-color: white;
-            padding: 25px;
-            max-width: 700px; /* Lebar form */
-            margin-left: auto;
-            margin-right: auto;
-            text-align: center; /* Untuk foto profil */
-        }
-        .profile-card .card-header {
-            background-color: white;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 15px;
-            margin-bottom: 15px;
-            font-weight: 600;
-            font-size: 1.1rem;
-            color: var(--heading-color);
-            text-align: center;
-        }
         .profile-picture-container {
-            width: 120px;
-            height: 120px;
+            width: 150px;
+            height: 150px;
             border-radius: 50%;
             overflow: hidden;
             margin: 0 auto 20px auto;
             border: 3px solid var(--primary-color);
-            background-color: #eee; /* Fallback for no image */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: #fff;
         }
         .profile-picture-container img {
             width: 100%;
             height: 100%;
             object-fit: cover;
         }
-        .btn-submit {
-            background-color: var(--primary-color);
-            border-color: var(--primary-color);
-            color: white;
-            padding: 10px 20px;
-            border-radius: 8px;
-            font-weight: 600;
-            transition: background-color 0.3s ease, transform 0.3s ease;
-        }
-        .btn-submit:hover {
-            background-color: #0056b3;
-            border-color: #0056b3;
-            transform: translateY(-2px);
-        }
-        .btn-secondary-custom {
+        .file-upload-label {
+            cursor: pointer;
+            padding: 8px 15px;
             background-color: var(--secondary-color);
-            border-color: var(--secondary-color);
             color: white;
-            padding: 10px 20px;
-            border-radius: 8px;
-            font-weight: 600;
-            transition: background-color 0.3s ease, transform 0.3s ease;
+            border-radius: 5px;
+            display: inline-block;
+            margin-top: 10px;
         }
-        .btn-secondary-custom:hover {
+        .file-upload-label:hover {
             background-color: #5a6268;
-            border-color: #5a6268;
-            transform: translateY(-2px);
         }
-
-        /* Footer */
-        .footer {
-            background-color: var(--dark-bg);
-            color: white;
-            padding: 30px 0;
-            text-align: center;
-            font-size: 0.85rem;
-            margin-top: 50px;
+        #profile_picture_input {
+            display: none;
         }
     </style>
 </head>
 <body>
+    <?php include 'includes/header.php'; ?>
 
-    <nav class="navbar navbar-expand-lg user-navbar fixed-top">
-        <div class="container">
-            <a class="navbar-brand" href="dashboard.php">HealthDoc</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavUser" aria-controls="navbarNavUser" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNavUser">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="dashboard.php">Dashboard</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="create_appointment.php">Buat Janji Temu</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="my_appointments.php">Janji Temu Saya</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link active" aria-current="page" href="profile.php">Profil Saya</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="../auth/logout.php">Logout <i class="fas fa-sign-out-alt ms-1"></i></a>
-                    </li>
-                </ul>
+    <div class="container py-5">
+        <div class="card shadow-lg mx-auto" style="max-width: 700px;">
+            <div class="card-header bg-primary text-white text-center py-4">
+                <h2 class="mb-0"><i class="fas fa-user-circle me-2"></i> Profil Saya</h2>
             </div>
-        </div>
-    </nav>
-
-    <div style="height: 80px;"></div> 
-
-    <div class="container main-content-container">
-        <h1 class="mb-5 text-center">Profil Saya</h1>
-
-        <div class="profile-card">
-            <div class="card-header">Kelola Informasi Profil Anda</div>
-            <div class="card-body">
+            <div class="card-body p-4">
                 <?php if ($success_message) : ?>
                     <div class="alert alert-success alert-dismissible fade show" role="alert">
                         <?= $success_message ?>
@@ -319,27 +198,20 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['update_profile'])) {
                     </div>
                 <?php endif; ?>
 
-                <?php if (!empty($user_data)) : ?>
-                    <form action="profile.php" method="POST" enctype="multipart/form-data" class="mb-4">
+                <?php if ($user_data) : ?>
+                    <div class="text-center mb-4">
                         <div class="profile-picture-container">
-                            <?php
-                                // Path ke gambar profil. Gunakan default jika tidak ada atau null
-                                $profile_pic_path = '../assets/img/' . htmlspecialchars($user_data['profile_picture'] ?? 'default_profile.png');
-                                // Periksa apakah file gambar ada, jika tidak gunakan placeholder
-                                if (!file_exists($profile_pic_path) || empty($user_data['profile_picture'])) {
-                                    $profile_pic_path = '../assets/img/default_profile.png';
-                                }
-                            ?>
-                            <img src="<?= $profile_pic_path ?>" alt="Foto Profil">
+                            <img src="<?= htmlspecialchars(!empty($user_data['profile_picture']) ? '../assets/img/' . $user_data['profile_picture'] : '../assets/img/default_profile.png') ?>" alt="Foto Profil" class="img-fluid">
                         </div>
-                        <div class="mb-3 d-flex justify-content-center">
-                            <input type="file" class="form-control w-auto me-2" id="profile_picture" name="profile_picture" accept="image/jpeg,image/png,image/gif">
-                            <button type="submit" class="btn btn-primary">Unggah Foto</button>
-                        </div>
-                        <small class="text-muted d-block mb-3">Maks. 2MB (JPG, JPEG, PNG, GIF)</small>
-                    </form>
+                        <form action="" method="POST" enctype="multipart/form-data" class="d-inline-block">
+                            <label for="profile_picture_input" class="file-upload-label">
+                                <i class="fas fa-camera me-2"></i> Ubah Foto Profil
+                            </label>
+                            <input type="file" id="profile_picture_input" name="profile_picture" accept="image/*" onchange="this.form.submit()">
+                        </form>
+                    </div>
 
-                    <form action="profile.php" method="POST">
+                    <form action="" method="POST">
                         <input type="hidden" name="update_profile" value="1">
                         <div class="mb-3 text-start">
                             <label for="nama" class="form-label">Nama Lengkap</label>
