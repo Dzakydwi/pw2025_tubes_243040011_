@@ -1,0 +1,109 @@
+body {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: #f8f9fa;  /* Light background for the whole page */
+}
+
+main {
+  flex: 1; /* Occupy remaining vertical space */
+}
+
+.navbar-brand {
+  font-weight: bold;
+}
+
+.card {
+  border-radius: 0.75rem;
+  border: none;
+  overflow: hidden; /* Ensure rounded corners on children */
+}
+
+.card-header {
+  background-color: #e9ecef;
+  border-bottom: 1px solid #dee2e6;
+  font-weight: 600;
+}
+
+/* Custom styles for tables */
+.table-hover tbody tr:hover {
+  background-color: #f1f1f1;
+  transform: scale(1.005);
+  transition: all 0.15s ease-in-out;
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+
+.table-dark {
+  background-color: #343a40 !important;
+  color: #fff;
+}
+
+.table-dark th {
+  border-color: #454d55;
+}
+
+/* Form Styling */
+.form-control:focus {
+  border-color: #80bdff;
+  box-shadow: 0 0 0 0.25rem rgba(0, 123, 255, 0.25);
+}
+
+.btn-primary,
+.btn-success,
+.btn-info,
+.btn-warning,
+.btn-danger {
+  font-weight: 500;
+}
+
+.btn-primary {
+  background-color: #007bff;
+  border-color: #007bff;
+}
+.btn-primary:hover {
+  background-color: #0056b3;
+  border-color: #0056b3;
+}
+
+.btn-outline-success {
+  color: #28a745;
+  border-color: #28a745;
+}
+.btn-outline-success:hover {
+  background-color: #28a745;
+  color: #fff;
+}
+
+.alert {
+  border-radius: 0.5rem;
+}
+
+/* Profile Picture on profile.php/patients.php */
+.img-fluid.rounded-circle {
+  box-shadow: 0 0 0 4px #007bff, 0 0 0 6px rgba(0, 123, 255, 0.2);
+}
+
+/* Specific styling for login/register page */
+.min-vh-100 {
+  min-height: 100vh;
+}
+
+.bg-primary {
+  background-color: #007bff !important;
+}
+
+.bg-success {
+  background-color: #28a745 !important;
+}
+
+.bg-info {
+  background-color: #17a2b8 !important;
+}
+
+.card-title {
+  color: #343a40;
+}
+
+.card-body h5 {
+  font-size: 1.25rem;
+}
