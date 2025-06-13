@@ -187,7 +187,7 @@
 <body>
     <nav class="navbar navbar-expand-lg user-navbar fixed-top">
         <div class="container">
-            <a class="navbar-brand" href="dashboard.php">Klinik Sehatku</a>
+            <a class="navbar-brand" href="dashboard.php">HealthDoc</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavUser" aria-controls="navbarNavUser" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>

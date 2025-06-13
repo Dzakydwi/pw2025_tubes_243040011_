@@ -196,7 +196,7 @@ if ($stmt_latest) {
 
     <nav class="navbar navbar-expand-lg user-navbar fixed-top">
         <div class="container">
-            <a class="navbar-brand" href="#">Klinik Sehatku</a>
+            <a class="navbar-brand" href="#">HealthDoc</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavUser" aria-controls="navbarNavUser" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
@@ -224,7 +224,7 @@ if ($stmt_latest) {
     <div class="container dashboard-container">
         <div class="welcome-section">
             <h1>Selamat Datang, <?= htmlspecialchars($user_name) ?>!</h1>
-            <p>Jaga kesehatan Anda tetap prima bersama Klinik Sehatku. Mari kelola janji temu Anda dengan mudah.</p>
+            <p>Jaga kesehatan Anda tetap prima bersama HealthDoc. Mari kelola janji temu Anda dengan mudah.</p>
             <a href="create_appointment.php" class="btn btn-primary-custom"><i class="fas fa-plus-circle me-2"></i> Buat Janji Temu Baru</a>
         </div>
 
@@ -302,7 +302,7 @@ if ($stmt_latest) {
 
     <footer class="footer">
         <div class="container">
-            <p>&copy; 2024 Klinik Sehatku. All rights reserved.</p>
+            <p>&copy; 2025 HealthDoc. All rights reserved.</p>
         </div>
     </footer>
 

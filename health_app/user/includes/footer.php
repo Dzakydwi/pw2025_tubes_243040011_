@@ -3,7 +3,7 @@
 ?>
     </div> <footer class="footer">
         <div class="container">
-            <p>&copy; 2024 Klinik Sehatku. All rights reserved.</p>
+            <p>&copy; 2025 HealthDoc. All rights reserved.</p>
         </div>
     </footer>
 

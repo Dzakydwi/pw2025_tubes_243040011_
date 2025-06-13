@@ -20,7 +20,7 @@ $allowed = array('jpg', 'jpeg', 'png', 'gif');
 
 if (in_array($fileExt, $allowed)) {
     if ($fileError === 0) {
-        if ($fileSize < 2000000) { // Max 2MB
+        if ($fileSize < 5000000) { // Max 5MB
             $newFileName = uniqid('', true) . "." . $fileExt;
             $fileDestination = $target_dir . $newFileName;
 
@@ -46,7 +46,7 @@ if (in_array($fileExt, $allowed)) {
                 $upload_error = "Gagal mengunggah file.";
             }
         } else {
-            $upload_error = "Ukuran file terlalu besar (maks. 2MB).";
+            $upload_error = "Ukuran file terlalu besar (maks. 5MB).";
         }
     } else {
         $upload_error = "Terjadi kesalahan saat mengunggah file: " . $fileError;

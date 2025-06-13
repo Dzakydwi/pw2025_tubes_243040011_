@@ -248,7 +248,7 @@ $recent_activities = array_slice($recent_activities, 0, 10);
 
     <nav class="navbar navbar-expand-lg admin-navbar fixed-top">
         <div class="container">
-            <a class="navbar-brand" href="#">Admin Klinik Sehatku</a>
+            <a class="navbar-brand" href="#">Admin HealthDoc</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavAdmin" aria-controls="navbarNavAdmin" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
@@ -353,7 +353,7 @@ $recent_activities = array_slice($recent_activities, 0, 10);
 
     <footer class="footer">
         <div class="container">
-            <p>&copy; 2024 Admin Klinik Sehatku. All rights reserved.</p>
+            <p>&copy; 2025 Admin HealthDoc. All rights reserved.</p>
         </div>
     </footer>
 

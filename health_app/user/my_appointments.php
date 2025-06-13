@@ -18,9 +18,9 @@ $params = [$user_id];
 $types = "i";
 
 if ($filter === 'upcoming') {
-    $sql .= " AND tanggal >= CURDATE() ORDER BY tanggal ASC, waktu ASC";
+    $sql .= " AND (tanggal > CURDATE() OR (tanggal = CURDATE() AND waktu >= CURTIME())) ORDER BY tanggal ASC, waktu ASC";
 } elseif ($filter === 'past') {
-    $sql .= " AND tanggal < CURDATE() ORDER BY tanggal DESC, waktu DESC";
+    $sql .= " AND (tanggal < CURDATE() OR (tanggal = CURDATE() AND waktu < CURTIME()))  ORDER BY tanggal DESC, waktu DESC";
 } else {
     // 'all' atau filter tidak valid
     $sql .= " ORDER BY tanggal DESC, waktu DESC";
@@ -47,82 +47,96 @@ $page_title = "Janji Temu Saya";
 include 'includes/header.php';
 ?>
 
-    <h1 class="mb-4 text-center">Janji Temu Saya</h1>
-    <p class="lead mb-4 text-center">Daftar janji temu Anda, <?= htmlspecialchars($user_name) ?>.</p>
+<div class="container">
+    <h1 class="my-4 text-center">Janji Temu Saya</h1>
 
-    <?php if (isset($error)) : ?>
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            <?= $error ?>
+    <?php if (isset($_SESSION['message'])) : ?>
+        <div class="alert alert-<?= $_SESSION['message_type'] ?> alert-dismissible fade show" role="alert">
+            <?= $_SESSION['message'] ?>
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
+        <?php
+        unset($_SESSION['message']);
+        unset($_SESSION['message_type']);
+        ?>
     <?php endif; ?>
 
-    <div class="table-card"> <div class="card-header d-flex justify-content-between align-items-center">
-            <span><i class="fas fa-calendar-check me-2"></i> Daftar Janji Temu</span>
-            <div class="filter-buttons">
-                <a href="my_appointments.php?filter=all" class="btn btn-sm <?= ($filter === 'all') ? 'btn-primary' : 'btn-outline-primary' ?>">Semua</a>
-                <a href="my_appointments.php?filter=upcoming" class="btn btn-sm <?= ($filter === 'upcoming') ? 'btn-primary' : 'btn-outline-primary' ?>">Mendatang</a>
-                <a href="my_appointments.php?filter=past" class="btn btn-sm <?= ($filter === 'past') ? 'btn-primary' : 'btn-outline-primary' ?>">Lewat</a>
-            </div>
+    <div class="card shadow-lg p-4 mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="card-title mb-0">Daftar Janji Temu</h4>
+            <a href="create_appointment.php" class="btn btn-primary btn-sm">
+                <i class="fas fa-plus-circle me-2"></i> Buat Janji Temu Baru
+            </a>
         </div>
-        <div class="card-body">
+
+        <div class="mb-3">
+            <label for="filter" class="form-label">Filter Janji Temu:</label>
+            <select class="form-select w-auto" id="filter" onchange="window.location.href='my_appointments.php?filter=' + this.value;">
+                <option value="all" <?= ($filter === 'all') ? 'selected' : '' ?>>Semua Janji Temu</option>
+                <option value="upcoming" <?= ($filter === 'upcoming') ? 'selected' : '' ?>>Janji Temu Mendatang</option>
+                <option value="past" <?= ($filter === 'past') ? 'selected' : '' ?>>Janji Temu Terlewat</option>
+            </select>
+        </div>
+
+        <div class="table-responsive">
             <?php if (empty($appointments)) : ?>
                 <div class="alert alert-info text-center" role="alert">
-                    Anda belum memiliki janji temu yang tercatat.
-                    <br>
-                    <a href="create_appointment.php" class="btn btn-primary mt-3"><i class="fas fa-plus-circle me-2"></i> Buat Janji Temu Baru</a>
+                    Belum ada janji temu untuk kategori ini.
                 </div>
             <?php else : ?>
-                <div class="table-responsive">
-                    <table class="table table-hover table-striped">
-                        <thead>
+                <table class="table table-hover table-striped">
+                    <thead class="table-dark">
+                        <tr>
+                            <th scope="col">#</th>
+                            <th scope="col">Dokter</th>
+                            <th scope="col">Tanggal</th>
+                            <th scope="col">Waktu</th>
+                            <th scope="col" class="text-center">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php $no = 1; ?>
+                        <?php foreach ($appointments as $app) : ?>
                             <tr>
-                                <th>#</th>
-                                <th>Dokter</th>
-                                <th>Tanggal</th>
-                                <th>Waktu</th>
-                                <th>Aksi</th>
+                                <td><?= $no++ ?></td>
+                                <td><?= htmlspecialchars($app['dokter']) ?></td>
+                                <td>
+                                    <?php
+                                    $tanggal_obj = DateTime::createFromFormat('Y-m-d', $app['tanggal']);
+                                    echo $tanggal_obj ? htmlspecialchars($tanggal_obj->format('d F Y')) : 'N/A';
+                                    ?>
+                                </td>
+                                <td>
+                                    <?php
+                                    $waktu_obj = DateTime::createFromFormat('H:i:s', $app['waktu']);
+                                    echo $waktu_obj ? htmlspecialchars($waktu_obj->format('H:i')) : 'N/A';
+                                    ?>
+                                </td>
+                                <td class="text-center">
+                                    <?php
+                                    // Create a combined DateTime object for comparison
+                                    $appointment_datetime_str = $app['tanggal'] . ' ' . $app['waktu'];
+                                    $appointment_datetime = DateTime::createFromFormat('Y-m-d H:i:s', $appointment_datetime_str);
+                                    $current_datetime = new DateTime(); // Current server time
+
+                                    $is_upcoming = ($appointment_datetime && $appointment_datetime >= $current_datetime);
+                                    ?>
+                                    <?php if ($is_upcoming) : ?>
+                                        <a href="edit_appointment.php?id=<?= htmlspecialchars($app['id']) ?>" class="btn btn-edit btn-action me-2"><i class="fas fa-edit"></i> Edit</a>
+                                        <a href="delete_appointment.php?id=<?= htmlspecialchars($app['id']) ?>" class="btn btn-delete btn-action" onclick="return confirm('Apakah Anda yakin ingin membatalkan janji temu ini?');"><i class="fas fa-trash-alt"></i> Batalkan</a>
+                                    <?php else : ?>
+                                        <span class="badge bg-secondary">Selesai/Lewat</span>
+                                    <?php endif; ?>
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            <?php $no = 1; ?>
-                            <?php foreach ($appointments as $app) : ?>
-                                <tr>
-                                    <td><?= $no++ ?></td>
-                                    <td><?= htmlspecialchars($app['dokter'] ?? 'N/A') ?></td>
-                                    <td>
-                                        <?php
-                                            $tanggal_obj = !empty($app['tanggal']) ? new DateTime($app['tanggal']) : null;
-                                            echo $tanggal_obj ? htmlspecialchars($tanggal_obj->format('d F Y')) : 'N/A';
-                                        ?>
-                                    </td>
-                                    <td>
-                                        <?php
-                                            $waktu_obj = !empty($app['waktu']) ? new DateTime($app['waktu']) : null;
-                                            echo $waktu_obj ? htmlspecialchars($waktu_obj->format('H:i')) : 'N/A';
-                                        ?>
-                                    </td>
-                                    <td>
-                                        <?php
-                                            $is_upcoming = ($tanggal_obj && $tanggal_obj->format('Y-m-d') >= date('Y-m-d'));
-                                        ?>
-                                        <?php if ($is_upcoming) : ?>
-                                            <a href="edit_appointment.php?id=<?= htmlspecialchars($app['id']) ?>" class="btn btn-edit btn-action me-2"><i class="fas fa-edit"></i> Edit</a>
-                                            <a href="delete_appointment.php?id=<?= htmlspecialchars($app['id']) ?>" class="btn btn-delete btn-action" onclick="return confirm('Apakah Anda yakin ingin membatalkan janji temu ini?');"><i class="fas fa-trash-alt"></i> Batalkan</a>
-                                        <?php else : ?>
-                                            <span class="badge bg-secondary">Selesai/Lewat</span>
-                                        <?php endif; ?>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
             <?php endif; ?>
         </div>
     </div>
 
-<?php
-// --- INCLUDE FOOTER ---
-include 'includes/footer.php';
-?>
+    <?php
+    // --- INCLUDE FOOTER ---
+    include 'includes/footer.php';
+    ?>

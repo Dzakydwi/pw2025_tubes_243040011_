@@ -191,7 +191,7 @@ if ($stmt_all) {
 
     <nav class="navbar navbar-expand-lg user-navbar fixed-top">
         <div class="container">
-            <a class="navbar-brand" href="dashboard.php">Klinik Sehatku</a>
+            <a class="navbar-brand" href="dashboard.php">HealthDoc</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavUser" aria-controls="navbarNavUser" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
@@ -221,7 +221,7 @@ if ($stmt_all) {
 
     <div class="container main-content-container">
         <h1 class="mb-4">Halo, <?= htmlspecialchars($user_name) ?>!</h1>
-        <p class="lead mb-5 text-white">Selamat datang di Dashboard Pengguna Klinik Sehatku.</p>
+        <p class="lead mb-5 text-white">Selamat datang di Dashboard Pengguna HealthDoc.</p>
 
         <?php if (isset($error)) : ?>
             <div class="alert alert-danger alert-dismissible fade show" role="alert">
